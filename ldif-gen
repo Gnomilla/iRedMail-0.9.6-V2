@@ -1,0 +1,124 @@
+#!/bin/bash
+
+DOMAIN=$2       # test.org
+LDAP_DOMAIN=$1  # dc=test,dc=org
+DCDOMAIN=$3     # test  (pole 'dc: <domain>')
+
+#take vmail pass from file
+VMAIL_PASS=$(PASS=$(grep 'LDAP bind dn (read-only): cn=vmail,' iRedMail.tips | sed 's/^.\+ \(\w\+\)$/\1/'); slappasswd -h {SSHA} -s $PASS | base64) 
+
+#take vmailadmin pass from file
+VMAIL_ADM=$(PASS=$(grep 'LDAP admin dn (read-write): cn=vmailadmin' iRedMail.tips | sed 's/^.\+ \(\w\+\)$/\1/'); slappasswd -h {SSHA} -s $PASS | base64) 
+
+#take postmaster pass from file
+PASS=$(grep -A 1 '   \* Login account:' iRedMail.tips | grep 'Username'  | sed 's/^.\+ \(\w\+\)$/\1/')
+POST_PASS=$(doveadm pw -s 'ssha512' -p $PASS | base64 -w0) 
+
+echo dn: $LDAP_DOMAIN
+echo objectClass: dcObject
+echo objectClass: organization
+echo dc: $DCDOMAIN
+echo o: $DCDOMAIN
+echo 
+echo dn: cn=vmail,$LDAP_DOMAIN
+echo objectClass: person
+echo objectClass: shadowAccount
+echo objectClass: top
+echo cn: vmail
+echo sn: vmail
+echo uid: vmail
+echo userPassword:: "$VMAIL_PASS"
+echo 
+echo dn: cn=vmailadmin,$LDAP_DOMAIN
+echo objectClass: person
+echo objectClass: shadowAccount
+echo objectClass: top
+echo cn: vmailadmin
+echo sn: vmailadmin
+echo uid: vmailadmin
+echo userPassword:: "$VMAIL_ADM"
+echo 
+echo dn: o=domains,$LDAP_DOMAIN
+echo objectClass: organization
+echo o: domains
+echo 
+echo dn: o=domainAdmins,$LDAP_DOMAIN
+echo objectClass: organization
+echo o: domainAdmins
+echo 
+echo dn: domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: mailDomain
+echo domainName: $DOMAIN
+echo mtaTransport: dovecot
+echo accountStatus: active
+echo accountSetting: minPasswordLength:8
+echo accountSetting: defaultQuota:1024
+echo enabledService: mail
+echo domainCurrentUserNumber: 1
+echo domainCurrentQuotaSize: 3196059648
+echo 
+echo dn: ou=Users,domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: organizationalUnit
+echo objectClass: top
+echo ou: Users
+echo 
+echo dn: ou=Groups,domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: organizationalUnit
+echo objectClass: top
+echo ou: Groups
+echo 
+echo dn: ou=Aliases,domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: organizationalUnit
+echo objectClass: top
+echo ou: Aliases
+echo 
+echo dn: ou=Externals,domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: organizationalUnit
+echo objectClass: top
+echo ou: Externals
+echo 
+echo dn: mail=postmaster@$DOMAIN,ou=Users,domainName=$DOMAIN,o=domains,$LDAP_DOMAIN
+echo objectClass: inetOrgPerson
+echo objectClass: shadowAccount
+echo objectClass: amavisAccount
+echo objectClass: mailUser
+echo objectClass: top
+echo uid: postmaster
+echo mail: postmaster@$DOMAIN
+echo storageBaseDirectory: /var/vmail
+echo mailMessageStore: vmail1/$DOMAIN/p/o/s/postmaster/
+echo homeDirectory: /var/vmail/vmail1/$DOMAIN/p/o/s/postmaster/
+echo userPassword:: "$POST_PASS"
+echo enabledService: mail
+echo enabledService: internal
+echo enabledService: doveadm
+echo enabledService: smtp
+echo enabledService: smtpsecured
+echo enabledService: pop3
+echo enabledService: pop3secured
+echo enabledService: imap
+echo enabledService: imapsecured
+echo enabledService: deliver
+echo enabledService: lda
+echo enabledService: lmtp
+echo enabledService: forward
+echo enabledService: senderbcc
+echo enabledService: recipientbcc
+echo enabledService: managesieve
+echo enabledService: managesievesecured
+echo enabledService: sieve
+echo enabledService: sievesecured
+echo enabledService: displayedInGlobalAddressBook
+echo enabledService: shadowaddress
+echo enabledService: lib-storage
+echo enabledService: indexer-worker
+echo enabledService: dsync
+echo enabledService: domainadmin
+echo enabledService: sogo
+echo domainGlobalAdmin: yes
+echo cn: postmaster
+echo givenName: postmaster
+echo sn: postmaster
+echo preferredLanguage: ru_RU
+echo mailQuota: 1048576000
+echo accountStatus: active
